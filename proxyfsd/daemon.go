@@ -22,6 +22,7 @@ import (
 	"github.com/swiftstack/ProxyFS/stats"
 	"github.com/swiftstack/ProxyFS/statslogger"
 	"github.com/swiftstack/ProxyFS/swiftclient"
+	"github.com/swiftstack/ProxyFS/trackedlock"
 )
 
 func Daemon(confFile string, confStrings []string, signalHandlerIsArmed *bool, errChan chan error, wg *sync.WaitGroup, signals ...os.Signal) {
@@ -81,6 +82,21 @@ func Daemon(confFile string, confStrings []string, signalHandlerIsArmed *bool, e
 		err = logger.Down()
 		if nil != err {
 			logger.Errorf("logger.Down() failed: %v", err) // Oddly, if logger.Down() fails, will this work?
+		}
+		wg.Done()
+	}()
+
+	err = trackedlock.Up(confMap)
+	if nil != err {
+		logger.Errorf("trackedlock.Up() failed: %v", err)
+		errChan <- err
+		return
+	}
+	wg.Add(1)
+	defer func() {
+		err = trackedlock.Down()
+		if nil != err {
+			logger.Errorf("trackedlock.Down() failed: %v", err)
 		}
 		wg.Done()
 	}()
@@ -344,6 +360,12 @@ func Daemon(confFile string, confStrings []string, signalHandlerIsArmed *bool, e
 				break
 			}
 
+			err = trackedlock.PauseAndContract(confMap)
+			if nil != err {
+				err = fmt.Errorf("trackedlock.PauseAndContract(): %v", err)
+				break
+			}
+
 			err = logger.PauseAndContract(confMap)
 			if nil != err {
 				err = fmt.Errorf("logger.PauseAndContract(): %v", err)
@@ -356,6 +378,12 @@ func Daemon(confFile string, confStrings []string, signalHandlerIsArmed *bool, e
 			err = logger.ExpandAndResume(confMap)
 			if nil != err {
 				err = fmt.Errorf("logger.ExpandAndResume(): %v", err)
+				break
+			}
+
+			err = trackedlock.ExpandAndResume(confMap)
+			if nil != err {
+				err = fmt.Errorf("trackedlock.ExpandAndResume(): %v", err)
 				break
 			}
 

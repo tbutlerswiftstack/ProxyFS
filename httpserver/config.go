@@ -11,11 +11,12 @@ import (
 
 	"github.com/swiftstack/ProxyFS/conf"
 	"github.com/swiftstack/ProxyFS/logger"
+	"github.com/swiftstack/ProxyFS/trackedlock"
 	"github.com/swiftstack/ProxyFS/utils"
 )
 
 type volumeStruct struct {
-	sync.Mutex
+	trackedlock.Mutex
 	name           string
 	lastStartTime  *time.Time
 	lastStopTime   *time.Time
@@ -27,7 +28,7 @@ type volumeStruct struct {
 }
 
 type globalsStruct struct {
-	sync.Mutex
+	trackedlock.Mutex
 	active        bool
 	whoAmI        string
 	ipAddr        string

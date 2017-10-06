@@ -5,7 +5,6 @@ import (
 	"os"
 	"runtime"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/swiftstack/ProxyFS/conf"
@@ -15,6 +14,7 @@ import (
 	"github.com/swiftstack/ProxyFS/logger"
 	"github.com/swiftstack/ProxyFS/stats"
 	"github.com/swiftstack/ProxyFS/swiftclient"
+	"github.com/swiftstack/ProxyFS/trackedlock"
 )
 
 const (
@@ -29,7 +29,7 @@ var (
 	measureDestroy  bool
 	measureStat     bool
 	perThreadDir    bool
-	rootDirMutex    sync.Mutex
+	rootDirMutex    trackedlock.Mutex
 	stepErrChan     chan error
 	threads         uint64
 	volumeHandle    inode.VolumeHandle
@@ -134,6 +134,12 @@ func main() {
 	// Start up needed ProxyFS components
 
 	err = logger.Up(confMap)
+	if nil != err {
+		fmt.Fprintf(os.Stderr, "logger.Up() failed: %v\n", err)
+		os.Exit(1)
+	}
+
+	err = trackedlock.Up(confMap)
 	if nil != err {
 		fmt.Fprintf(os.Stderr, "logger.Up() failed: %v\n", err)
 		os.Exit(1)

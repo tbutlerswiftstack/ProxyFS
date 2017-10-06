@@ -17,6 +17,7 @@ import (
 	"github.com/swiftstack/ProxyFS/logger"
 	"github.com/swiftstack/ProxyFS/ramswift"
 	"github.com/swiftstack/ProxyFS/stats"
+	"github.com/swiftstack/ProxyFS/trackedlock"
 )
 
 type testObjectCopyCallbackStruct struct {
@@ -36,6 +37,9 @@ func (tOCCS *testObjectCopyCallbackStruct) BytesRemaining(bytesRemaining uint64)
 
 func TestAPI(t *testing.T) {
 	confStrings := []string{
+		"TrackedLock.LockHoldTimeLimit=0s",
+		"TrackedLock.LockCheckPeriod=0s",
+
 		"Stats.IPAddr=localhost",
 		"Stats.UDPPort=52184",
 		"Stats.BufferLength=100",
@@ -91,6 +95,12 @@ func TestAPI(t *testing.T) {
 		t.Fatalf(tErr)
 	}
 
+	err = trackedlock.Up(confMap)
+	if nil != err {
+		tErr := fmt.Sprintf("trackedlock.Up(confMap) failed: %v", err)
+		t.Fatalf(tErr)
+	}
+
 	signalHandlerIsArmed := false
 	doneChan := make(chan bool, 1) // Must be buffered to avoid race
 
@@ -134,6 +144,18 @@ func TestAPI(t *testing.T) {
 	err = stats.Down()
 	if nil != err {
 		tErr := fmt.Sprintf("stats.Down() failed: %v", err)
+		t.Fatalf(tErr)
+	}
+
+	err = trackedlock.Down()
+	if nil != err {
+		tErr := fmt.Sprintf("trackedlock.Down() failed: %v", err)
+		t.Fatalf(tErr)
+	}
+
+	err = logger.Down()
+	if nil != err {
+		tErr := fmt.Sprintf("logger.Down() failed: %v", err)
 		t.Fatalf(tErr)
 	}
 

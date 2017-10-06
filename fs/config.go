@@ -10,6 +10,7 @@ import (
 	"github.com/swiftstack/ProxyFS/inode"
 	"github.com/swiftstack/ProxyFS/logger"
 	"github.com/swiftstack/ProxyFS/swiftclient"
+	"github.com/swiftstack/ProxyFS/trackedlock"
 	"github.com/swiftstack/ProxyFS/utils"
 )
 
@@ -32,7 +33,7 @@ type mountStruct struct {
 }
 
 type volumeStruct struct {
-	sync.Mutex
+	trackedlock.Mutex
 	volumeName               string
 	maxFlushTime             time.Duration
 	FLockMap                 map[inode.InodeNumber]*list.List

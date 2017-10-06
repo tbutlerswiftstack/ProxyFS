@@ -20,6 +20,7 @@ import (
 	"github.com/swiftstack/ProxyFS/ramswift"
 	"github.com/swiftstack/ProxyFS/stats"
 	"github.com/swiftstack/ProxyFS/swiftclient"
+	"github.com/swiftstack/ProxyFS/trackedlock"
 	"github.com/swiftstack/ProxyFS/utils"
 )
 
@@ -72,9 +73,12 @@ func testSetup() (err error) {
 		"Stats.BufferLength=100",
 		"Stats.MaxLatency=1s",
 		"Logging.LogFilePath=proxyfsd.log",
+
+		"TrackedLock.LockHoldTimeLimit=0s",
+		"TrackedLock.LockCheckPeriod=0s",
+
 		"SwiftClient.NoAuthTCPPort=45262",
 		"SwiftClient.Timeout=10s",
-
 		"SwiftClient.RetryLimit=1",
 		"SwiftClient.RetryLimitObject=1",
 		"SwiftClient.RetryDelay=10ms",
@@ -140,6 +144,11 @@ func testSetup() (err error) {
 		return
 	}
 
+	err = trackedlock.Up(testConfMap)
+	if nil != err {
+		return
+	}
+
 	err = stats.Up(testConfMap)
 	if nil != err {
 		return
@@ -175,6 +184,7 @@ func testTeardown() (err error) {
 	swiftclient.Down()
 	dlm.Down()
 	stats.Down()
+	trackedlock.Down()
 	logger.Down()
 
 	testDir, err := os.Getwd()

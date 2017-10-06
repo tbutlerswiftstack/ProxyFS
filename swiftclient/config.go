@@ -10,6 +10,7 @@ import (
 
 	"github.com/swiftstack/ProxyFS/conf"
 	"github.com/swiftstack/ProxyFS/logger"
+	"github.com/swiftstack/ProxyFS/trackedlock"
 )
 
 type connectionStruct struct {
@@ -44,7 +45,7 @@ type pendingDeleteStruct struct {
 }
 
 type pendingDeletesStruct struct {
-	sync.Mutex
+	trackedlock.Mutex
 	armed              bool
 	cond               *sync.Cond // Signal if adding 1st pendingDeleteStruct or shutting down
 	head               *pendingDeleteStruct
