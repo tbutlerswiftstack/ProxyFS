@@ -36,6 +36,12 @@ type llrbTreeStruct struct {
 
 // API functions (see api.go)
 
+// Return the tree to its original, empty, state.
+//
+func (tree *llrbTreeStruct) Reset() {
+	tree.root = nil
+}
+
 func (tree *llrbTreeStruct) BisectLeft(key Key) (index int, found bool, err error) {
 	tree.Lock()
 	defer tree.Unlock()
