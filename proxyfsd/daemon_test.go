@@ -251,7 +251,7 @@ func TestDaemon(t *testing.T) {
 
 	createdFileInodeNumber, err = mountHandle.Create(
 		inode.InodeRootUserID,
-		inode.InodeRootGroupID,
+		inode.InodeGroupID(0),
 		nil,
 		inode.RootDirInodeNumber,
 		"TestFile",
@@ -263,7 +263,7 @@ func TestDaemon(t *testing.T) {
 
 	bytesWritten, err = mountHandle.Write(
 		inode.InodeRootUserID,
-		inode.InodeRootGroupID,
+		inode.InodeGroupID(0),
 		nil,
 		createdFileInodeNumber,
 		0,
@@ -281,7 +281,7 @@ func TestDaemon(t *testing.T) {
 
 	toReadFileInodeNumber, err = mountHandle.Lookup(
 		inode.InodeRootUserID,
-		inode.InodeRootGroupID,
+		inode.InodeGroupID(0),
 		nil,
 		inode.RootDirInodeNumber,
 		"TestFile",
@@ -292,7 +292,7 @@ func TestDaemon(t *testing.T) {
 
 	readData, err = mountHandle.Read(
 		inode.InodeRootUserID,
-		inode.InodeRootGroupID,
+		inode.InodeGroupID(0),
 		nil,
 		toReadFileInodeNumber,
 		0,
@@ -347,7 +347,7 @@ func TestDaemon(t *testing.T) {
 
 	toReadFileInodeNumber, err = mountHandle.Lookup(
 		inode.InodeRootUserID,
-		inode.InodeRootGroupID,
+		inode.InodeGroupID(0),
 		nil,
 		inode.RootDirInodeNumber,
 		"TestFile",
@@ -358,7 +358,7 @@ func TestDaemon(t *testing.T) {
 
 	readData, err = mountHandle.Read(
 		inode.InodeRootUserID,
-		inode.InodeRootGroupID,
+		inode.InodeGroupID(0),
 		nil,
 		toReadFileInodeNumber,
 		0,

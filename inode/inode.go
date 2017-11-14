@@ -675,7 +675,7 @@ func (vS *volumeStruct) Access(inodeNumber InodeNumber, userID InodeUserID, grou
 	// open state (there's no file descriptor that tracks if the file was
 	// opened with write permission).  But I'm not sure that other operations
 	// that require write permission, like truncate(2) work the same way.
-	if (InodeRootUserID == userID) || (InodeRootGroupID == groupID) {
+	if (InodeRootUserID == userID) || (InodeGroupID(0) == groupID) {
 		accessReturn = true
 		return
 	}
@@ -689,7 +689,7 @@ func (vS *volumeStruct) Access(inodeNumber InodeNumber, userID InodeUserID, grou
 
 	if !groupIDCheck {
 		for _, otherGroupID := range otherGroupIDs {
-			if InodeRootGroupID == otherGroupID {
+			if InodeGroupID(0) == otherGroupID {
 				accessReturn = true
 				return
 			}

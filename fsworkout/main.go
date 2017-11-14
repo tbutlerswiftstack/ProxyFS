@@ -329,13 +329,13 @@ func fsWorkout(threadIndex uint64) {
 	if perThreadDir {
 		dirInodeName = fmt.Sprintf("%s%016X", dirInodeNamePrefix, threadIndex)
 		if measureCreate {
-			dirInodeNumber, err = mountHandle.Mkdir(inode.InodeRootUserID, inode.InodeRootGroupID, nil, inode.RootDirInodeNumber, dirInodeName, inode.PosixModePerm)
+			dirInodeNumber, err = mountHandle.Mkdir(inode.InodeRootUserID, inode.InodeGroupID(0), nil, inode.RootDirInodeNumber, dirInodeName, inode.PosixModePerm)
 			if nil != err {
 				stepErrChan <- err
 				runtime.Goexit()
 			}
 		} else { // measureStat || measureDestroy
-			dirInodeNumber, err = mountHandle.Lookup(inode.InodeRootUserID, inode.InodeRootGroupID, nil, inode.RootDirInodeNumber, dirInodeName)
+			dirInodeNumber, err = mountHandle.Lookup(inode.InodeRootUserID, inode.InodeGroupID(0), nil, inode.RootDirInodeNumber, dirInodeName)
 			if nil != err {
 				stepErrChan <- err
 				runtime.Goexit()
@@ -358,24 +358,24 @@ func fsWorkout(threadIndex uint64) {
 	// Do measured operations
 	for i = 0; i < inodesPerThread; i++ {
 		if measureCreate {
-			fileInodeNumber, err = mountHandle.Create(inode.InodeRootUserID, inode.InodeRootGroupID, nil, dirInodeNumber, fileInodeName[i], inode.PosixModePerm)
+			fileInodeNumber, err = mountHandle.Create(inode.InodeRootUserID, inode.InodeGroupID(0), nil, dirInodeNumber, fileInodeName[i], inode.PosixModePerm)
 			if nil != err {
 				stepErrChan <- err
 				runtime.Goexit()
 			}
 		} else if measureStat {
-			fileInodeNumber, err = mountHandle.Lookup(inode.InodeRootUserID, inode.InodeRootGroupID, nil, dirInodeNumber, fileInodeName[i])
+			fileInodeNumber, err = mountHandle.Lookup(inode.InodeRootUserID, inode.InodeGroupID(0), nil, dirInodeNumber, fileInodeName[i])
 			if nil != err {
 				stepErrChan <- err
 				runtime.Goexit()
 			}
-			_, err = mountHandle.Getstat(inode.InodeRootUserID, inode.InodeRootGroupID, nil, fileInodeNumber)
+			_, err = mountHandle.Getstat(inode.InodeRootUserID, inode.InodeGroupID(0), nil, fileInodeNumber)
 			if nil != err {
 				stepErrChan <- err
 				runtime.Goexit()
 			}
 		} else { // measureDestroy
-			err = mountHandle.Unlink(inode.InodeRootUserID, inode.InodeRootGroupID, nil, dirInodeNumber, fileInodeName[i])
+			err = mountHandle.Unlink(inode.InodeRootUserID, inode.InodeGroupID(0), nil, dirInodeNumber, fileInodeName[i])
 			if nil != err {
 				stepErrChan <- err
 				runtime.Goexit()
@@ -391,7 +391,7 @@ func fsWorkout(threadIndex uint64) {
 
 	// Do shutdown step
 	if perThreadDir && measureDestroy {
-		err = mountHandle.Rmdir(inode.InodeRootUserID, inode.InodeRootGroupID, nil, inode.RootDirInodeNumber, dirInodeName)
+		err = mountHandle.Rmdir(inode.InodeRootUserID, inode.InodeGroupID(0), nil, inode.RootDirInodeNumber, dirInodeName)
 		if nil != err {
 			stepErrChan <- err
 			runtime.Goexit()

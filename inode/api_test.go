@@ -465,12 +465,12 @@ func TestAPI(t *testing.T) {
 		t.Fatalf("GetFSID() returned unexpected FSID")
 	}
 
-	fileInodeNumber, err := testVolumeHandle.CreateFile(InodeMode(0000), InodeRootUserID, InodeRootGroupID)
+	fileInodeNumber, err := testVolumeHandle.CreateFile(InodeMode(0000), InodeRootUserID, InodeGroupID(0))
 	if nil != err {
 		t.Fatalf("CreateFile() failed: %v", err)
 	}
 
-	if !testVolumeHandle.Access(fileInodeNumber, InodeRootUserID, InodeRootGroupID, nil, F_OK) {
+	if !testVolumeHandle.Access(fileInodeNumber, InodeRootUserID, InodeGroupID(0), nil, F_OK) {
 		t.Fatalf("Access(fileInodeNumber,,,,F_OK) after CreateFile() should not have failed")
 	}
 
@@ -478,11 +478,11 @@ func TestAPI(t *testing.T) {
 		t.Fatalf("Access(fileInodeNumber,InodeUserID(123),,,R_OK|W_OK|X_OK) should have returned true")
 	}
 
-	if !testVolumeHandle.Access(fileInodeNumber, InodeUserID(123), InodeRootGroupID, nil, R_OK|W_OK|X_OK) {
+	if !testVolumeHandle.Access(fileInodeNumber, InodeUserID(123), InodeGroupID(0), nil, R_OK|W_OK|X_OK) {
 		t.Fatalf("Access(fileInodeNumber,InodeUserID(123),,,R_OK|W_OK|X_OK) should have returned true")
 	}
 
-	if testVolumeHandle.Access(fileInodeNumber, InodeRootUserID, InodeRootGroupID, nil, R_OK|P_OK) {
+	if testVolumeHandle.Access(fileInodeNumber, InodeRootUserID, InodeGroupID(0), nil, R_OK|P_OK) {
 		t.Fatalf("Access(fileInodeNumber,,,,R_OK|X_OK) should have returned false")
 	}
 
@@ -491,15 +491,15 @@ func TestAPI(t *testing.T) {
 		t.Fatalf("SetOwnerUserID(,InodeUserID(123)) failed: %v", err)
 	}
 
-	if !testVolumeHandle.Access(fileInodeNumber, InodeRootUserID, InodeRootGroupID, nil, P_OK) {
+	if !testVolumeHandle.Access(fileInodeNumber, InodeRootUserID, InodeGroupID(0), nil, P_OK) {
 		t.Fatalf("Access(fileInodeNumber,InodeRootUserID,,,P_OK should have returned true")
 	}
 
-	if !testVolumeHandle.Access(fileInodeNumber, InodeUserID(123), InodeRootGroupID, nil, P_OK) {
+	if !testVolumeHandle.Access(fileInodeNumber, InodeUserID(123), InodeGroupID(0), nil, P_OK) {
 		t.Fatalf("Access(fileInodeNumber,InodeUserID(123),,,P_OK should have returned true")
 	}
 
-	if testVolumeHandle.Access(fileInodeNumber, InodeUserID(789), InodeRootGroupID, nil, P_OK) {
+	if testVolumeHandle.Access(fileInodeNumber, InodeUserID(789), InodeGroupID(0), nil, P_OK) {
 		t.Fatalf("Access(fileInodeNumber,InodeUserID(789),,,P_OK should have returned true")
 	}
 
@@ -582,9 +582,9 @@ func TestAPI(t *testing.T) {
 	if nil != err {
 		t.Fatalf("SetPermMode(,InodeMode(0006)) failed: %v", err)
 	}
-	err = testVolumeHandle.SetOwnerUserIDGroupID(fileInodeNumber, InodeRootUserID, InodeRootGroupID)
+	err = testVolumeHandle.SetOwnerUserIDGroupID(fileInodeNumber, InodeRootUserID, InodeGroupID(0))
 	if nil != err {
-		t.Fatalf("SetOwnerUserIDGroupID(,InodeRootUserID,InodeRootGroupID) failed: %v", err)
+		t.Fatalf("SetOwnerUserIDGroupID(,InodeRootUserID,InodeGroupID(0)) failed: %v", err)
 	}
 
 	if !testVolumeHandle.Access(fileInodeNumber, InodeUserID(123), InodeGroupID(456), nil, R_OK) {
@@ -612,7 +612,7 @@ func TestAPI(t *testing.T) {
 		t.Fatalf("Destroy(fileInodeNumber) failed: %v", err)
 	}
 
-	if testVolumeHandle.Access(fileInodeNumber, InodeRootUserID, InodeRootGroupID, nil, F_OK) {
+	if testVolumeHandle.Access(fileInodeNumber, InodeRootUserID, InodeGroupID(0), nil, F_OK) {
 		t.Fatalf("Access(fileInodeNumber,,,,F_OK) after Destroy() should have failed")
 	}
 
