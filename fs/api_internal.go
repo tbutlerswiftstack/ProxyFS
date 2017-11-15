@@ -154,7 +154,8 @@ func (vS *volumeStruct) inFlightFileInodeDataFlusher(inodeNumber inode.InodeNumb
 		logger.PanicfWithError(err, "dlm.Writelock() for volume '%s' inode %d failed", vS.volumeName, inodeNumber)
 	}
 
-	stillExists = vS.VolumeHandle.Access(inodeNumber, inode.InodeRootUserID, inode.InodeGroupID(0), nil, inode.F_OK)
+	stillExists = vS.VolumeHandle.Access(inodeNumber, inode.InodeRootUserID, inode.InodeGroupID(0), nil, inode.F_OK,
+		inode.NoOverride)
 	if stillExists {
 		err = vS.VolumeHandle.Flush(inodeNumber, false)
 		if nil != err {
@@ -252,7 +253,8 @@ func mount(volumeName string, mountOptions MountOptions) (mountHandle MountHandl
 }
 
 func (mS *mountStruct) Access(userID inode.InodeUserID, groupID inode.InodeGroupID, otherGroupIDs []inode.InodeGroupID, inodeNumber inode.InodeNumber, accessMode inode.InodeMode) (accessReturn bool) {
-	accessReturn = mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, accessMode)
+	accessReturn = mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, accessMode,
+		inode.NoOverride)
 	return
 }
 
@@ -279,10 +281,12 @@ func (mS *mountStruct) Create(userID inode.InodeUserID, groupID inode.InodeGroup
 	}
 	defer dirInodeLock.Unlock()
 
-	if !mS.volStruct.VolumeHandle.Access(dirInodeNumber, userID, groupID, otherGroupIDs, inode.F_OK) {
+	if !mS.volStruct.VolumeHandle.Access(dirInodeNumber, userID, groupID, otherGroupIDs, inode.F_OK,
+		inode.NoOverride) {
 		return 0, blunder.NewError(blunder.NotFoundError, "ENOENT")
 	}
-	if !mS.volStruct.VolumeHandle.Access(dirInodeNumber, userID, groupID, otherGroupIDs, inode.W_OK|inode.X_OK) {
+	if !mS.volStruct.VolumeHandle.Access(dirInodeNumber, userID, groupID, otherGroupIDs, inode.W_OK|inode.X_OK,
+		inode.NoOverride) {
 		return 0, blunder.NewError(blunder.PermDeniedError, "EACCES")
 	}
 
@@ -316,10 +320,12 @@ func (mS *mountStruct) Flush(userID inode.InodeUserID, groupID inode.InodeGroupI
 	}
 	defer inodeLock.Unlock()
 
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK,
+		inode.NoOverride) {
 		return blunder.NewError(blunder.NotFoundError, "ENOENT")
 	}
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.W_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.W_OK,
+		inode.OwnerOverride) {
 		return blunder.NewError(blunder.PermDeniedError, "EACCES")
 	}
 
@@ -582,11 +588,11 @@ func (mS *mountStruct) Flock(userID inode.InodeUserID, groupID inode.InodeGroupI
 	}
 	defer inodeLock.Unlock()
 
-	if !mS.volStruct.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK) {
+	if !mS.volStruct.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK, inode.NoOverride) {
 		err = blunder.NewError(blunder.NotFoundError, "ENOENT")
 		return
 	}
-	if !mS.volStruct.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.R_OK) {
+	if !mS.volStruct.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.R_OK, inode.OwnerOverride) {
 		err = blunder.NewError(blunder.PermDeniedError, "EACCES")
 		return
 	}
@@ -724,11 +730,13 @@ func (mS *mountStruct) GetXAttr(userID inode.InodeUserID, groupID inode.InodeGro
 	}
 	defer inodeLock.Unlock()
 
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK,
+		inode.NoOverride) {
 		err = blunder.NewError(blunder.NotFoundError, "ENOENT")
 		return
 	}
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.R_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.R_OK,
+		inode.OwnerOverride) {
 		err = blunder.NewError(blunder.PermDeniedError, "EACCES")
 		return
 	}
@@ -872,15 +880,18 @@ func (mS *mountStruct) Link(userID inode.InodeUserID, groupID inode.InodeGroupID
 	}
 	defer targetInodeLock.Unlock()
 
-	if !mS.volStruct.VolumeHandle.Access(dirInodeNumber, userID, groupID, otherGroupIDs, inode.F_OK) {
+	if !mS.volStruct.VolumeHandle.Access(dirInodeNumber, userID, groupID, otherGroupIDs, inode.F_OK,
+		inode.NoOverride) {
 		err = blunder.NewError(blunder.NotFoundError, "ENOENT")
 		return
 	}
-	if !mS.volStruct.VolumeHandle.Access(targetInodeNumber, userID, groupID, otherGroupIDs, inode.F_OK) {
+	if !mS.volStruct.VolumeHandle.Access(targetInodeNumber, userID, groupID, otherGroupIDs, inode.F_OK,
+		inode.NoOverride) {
 		err = blunder.NewError(blunder.NotFoundError, "ENOENT")
 		return
 	}
-	if !mS.volStruct.VolumeHandle.Access(dirInodeNumber, userID, groupID, otherGroupIDs, inode.W_OK|inode.X_OK) {
+	if !mS.volStruct.VolumeHandle.Access(dirInodeNumber, userID, groupID, otherGroupIDs, inode.W_OK|inode.X_OK,
+		inode.NoOverride) {
 		err = blunder.NewError(blunder.PermDeniedError, "EACCES")
 		return
 	}
@@ -908,11 +919,13 @@ func (mS *mountStruct) ListXAttr(userID inode.InodeUserID, groupID inode.InodeGr
 	}
 	defer inodeLock.Unlock()
 
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK,
+		inode.NoOverride) {
 		err = blunder.NewError(blunder.NotFoundError, "ENOENT")
 		return
 	}
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.R_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.R_OK,
+		inode.OwnerOverride) {
 		err = blunder.NewError(blunder.PermDeniedError, "EACCES")
 		return
 	}
@@ -939,11 +952,13 @@ func (mS *mountStruct) Lookup(userID inode.InodeUserID, groupID inode.InodeGroup
 	dirInodeLock.ReadLock()
 	defer dirInodeLock.Unlock()
 
-	if !mS.volStruct.VolumeHandle.Access(dirInodeNumber, userID, groupID, otherGroupIDs, inode.F_OK) {
+	if !mS.volStruct.VolumeHandle.Access(dirInodeNumber, userID, groupID, otherGroupIDs, inode.F_OK,
+		inode.NoOverride) {
 		err = blunder.NewError(blunder.NotFoundError, "ENOENT")
 		return
 	}
-	if !mS.volStruct.VolumeHandle.Access(dirInodeNumber, userID, groupID, otherGroupIDs, inode.X_OK) {
+	if !mS.volStruct.VolumeHandle.Access(dirInodeNumber, userID, groupID, otherGroupIDs, inode.X_OK,
+		inode.NoOverride) {
 		err = blunder.NewError(blunder.PermDeniedError, "EACCES")
 		return
 	}
@@ -979,7 +994,8 @@ func (mS *mountStruct) LookupPath(userID inode.InodeUserID, groupID inode.InodeG
 			return
 		}
 
-		if !mS.volStruct.VolumeHandle.Access(cursorInodeNumber, userID, groupID, otherGroupIDs, inode.X_OK) {
+		if !mS.volStruct.VolumeHandle.Access(cursorInodeNumber, userID, groupID, otherGroupIDs, inode.X_OK,
+			inode.NoOverride) {
 			cursorInodeLock.Unlock()
 			err = blunder.NewError(blunder.PermDeniedError, "EACCES")
 			return
@@ -2047,7 +2063,9 @@ func (mS *mountStruct) Mkdir(userID inode.InodeUserID, groupID inode.InodeGroupI
 	}
 	defer inodeLock.Unlock()
 
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK,
+		inode.NoOverride) {
+
 		destroyErr := mS.volStruct.VolumeHandle.Destroy(newDirInodeNumber)
 		if destroyErr != nil {
 			logger.WarnfWithError(destroyErr, "couldn't destroy inode %v after failed Access(F_OK) in fs.Mkdir", newDirInodeNumber)
@@ -2055,7 +2073,9 @@ func (mS *mountStruct) Mkdir(userID inode.InodeUserID, groupID inode.InodeGroupI
 		err = blunder.NewError(blunder.NotFoundError, "ENOENT")
 		return 0, err
 	}
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.W_OK|inode.X_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.W_OK|inode.X_OK,
+		inode.NoOverride) {
+
 		destroyErr := mS.volStruct.VolumeHandle.Destroy(newDirInodeNumber)
 		if destroyErr != nil {
 			logger.WarnfWithError(destroyErr, "couldn't destroy inode %v after failed Access(W_OK|X_OK) in fs.Mkdir", newDirInodeNumber)
@@ -2087,11 +2107,13 @@ func (mS *mountStruct) RemoveXAttr(userID inode.InodeUserID, groupID inode.Inode
 	}
 	defer inodeLock.Unlock()
 
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK,
+		inode.NoOverride) {
 		err = blunder.NewError(blunder.NotFoundError, "ENOENT")
 		return
 	}
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.W_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.W_OK,
+		inode.OwnerOverride) {
 		err = blunder.NewError(blunder.PermDeniedError, "EACCES")
 		return
 	}
@@ -2143,12 +2165,16 @@ retryLock:
 		return
 	}
 
-	if !mS.volStruct.VolumeHandle.Access(srcDirInodeNumber, userID, groupID, otherGroupIDs, inode.F_OK) {
+	if !mS.volStruct.VolumeHandle.Access(srcDirInodeNumber, userID, groupID, otherGroupIDs, inode.F_OK,
+		inode.NoOverride) {
+
 		srcDirLock.Unlock()
 		err = blunder.NewError(blunder.NotFoundError, "ENOENT")
 		return
 	}
-	if !mS.volStruct.VolumeHandle.Access(srcDirInodeNumber, userID, groupID, otherGroupIDs, inode.W_OK|inode.X_OK) {
+	if !mS.volStruct.VolumeHandle.Access(srcDirInodeNumber, userID, groupID, otherGroupIDs, inode.W_OK|inode.X_OK,
+		inode.NoOverride) {
+
 		srcDirLock.Unlock()
 		err = blunder.NewError(blunder.PermDeniedError, "EACCES")
 		return
@@ -2167,13 +2193,17 @@ retryLock:
 			return err
 		}
 
-		if !mS.volStruct.VolumeHandle.Access(dstDirInodeNumber, userID, groupID, otherGroupIDs, inode.F_OK) {
+		if !mS.volStruct.VolumeHandle.Access(dstDirInodeNumber, userID, groupID, otherGroupIDs, inode.F_OK,
+			inode.NoOverride) {
+
 			srcDirLock.Unlock()
 			dstDirLock.Unlock()
 			err = blunder.NewError(blunder.NotFoundError, "ENOENT")
 			return
 		}
-		if !mS.volStruct.VolumeHandle.Access(dstDirInodeNumber, userID, groupID, otherGroupIDs, inode.W_OK|inode.X_OK) {
+		if !mS.volStruct.VolumeHandle.Access(dstDirInodeNumber, userID, groupID, otherGroupIDs,
+			inode.W_OK|inode.X_OK, inode.NoOverride) {
+
 			srcDirLock.Unlock()
 			dstDirLock.Unlock()
 			err = blunder.NewError(blunder.PermDeniedError, "EACCES")
@@ -2207,11 +2237,13 @@ func (mS *mountStruct) Read(userID inode.InodeUserID, groupID inode.InodeGroupID
 	}
 	defer inodeLock.Unlock()
 
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK,
+		inode.NoOverride) {
 		err = blunder.NewError(blunder.NotFoundError, "ENOENT")
 		return
 	}
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.R_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.R_OK,
+		inode.OwnerOverride) {
 		err = blunder.NewError(blunder.PermDeniedError, "EACCES")
 		return
 	}
@@ -2252,11 +2284,13 @@ func (mS *mountStruct) Readdir(userID inode.InodeUserID, groupID inode.InodeGrou
 	}
 	defer inodeLock.Unlock()
 
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK,
+		inode.NoOverride) {
 		err = blunder.NewError(blunder.NotFoundError, "ENOENT")
 		return
 	}
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.X_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.R_OK,
+		inode.OwnerOverride) {
 		err = blunder.NewError(blunder.PermDeniedError, "EACCES")
 		return
 	}
@@ -2278,11 +2312,15 @@ func (mS *mountStruct) ReaddirOne(userID inode.InodeUserID, groupID inode.InodeG
 	}
 	defer inodeLock.Unlock()
 
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK,
+		inode.NoOverride) {
+
 		err = blunder.NewError(blunder.NotFoundError, "ENOENT")
 		return
 	}
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.X_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.R_OK,
+		inode.OwnerOverride) {
+
 		err = blunder.NewError(blunder.PermDeniedError, "EACCES")
 		return
 	}
@@ -2310,12 +2348,14 @@ func (mS *mountStruct) ReaddirPlus(userID inode.InodeUserID, groupID inode.Inode
 		return
 	}
 
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK,
+		inode.NoOverride) {
 		inodeLock.Unlock()
 		err = blunder.NewError(blunder.NotFoundError, "ENOENT")
 		return
 	}
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.X_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.R_OK|inode.X_OK,
+		inode.OwnerOverride) {
 		inodeLock.Unlock()
 		err = blunder.NewError(blunder.PermDeniedError, "EACCES")
 		return
@@ -2366,12 +2406,14 @@ func (mS *mountStruct) ReaddirOnePlus(userID inode.InodeUserID, groupID inode.In
 		return
 	}
 
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK,
+		inode.NoOverride) {
 		inodeLock.Unlock()
 		err = blunder.NewError(blunder.NotFoundError, "ENOENT")
 		return
 	}
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.X_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.R_OK|inode.X_OK,
+		inode.OwnerOverride) {
 		inodeLock.Unlock()
 		err = blunder.NewError(blunder.PermDeniedError, "EACCES")
 		return
@@ -2430,11 +2472,15 @@ func (mS *mountStruct) Readsymlink(userID inode.InodeUserID, groupID inode.Inode
 	}
 	defer inodeLock.Unlock()
 
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK,
+		inode.NoOverride) {
+
 		err = blunder.NewError(blunder.NotFoundError, "ENOENT")
 		return
 	}
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.R_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.R_OK,
+		inode.NoOverride) {
+
 		err = blunder.NewError(blunder.PermDeniedError, "EACCES")
 		return
 	}
@@ -2455,11 +2501,15 @@ func (mS *mountStruct) Resize(userID inode.InodeUserID, groupID inode.InodeGroup
 	}
 	defer inodeLock.Unlock()
 
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK,
+		inode.NoOverride) {
+
 		err = blunder.NewError(blunder.NotFoundError, "ENOENT")
 		return
 	}
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.W_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.W_OK,
+		inode.OwnerOverride) {
+
 		err = blunder.NewError(blunder.PermDeniedError, "EACCES")
 		return
 	}
@@ -2482,11 +2532,13 @@ func (mS *mountStruct) Rmdir(userID inode.InodeUserID, groupID inode.InodeGroupI
 	}
 	defer inodeLock.Unlock()
 
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK,
+		inode.NoOverride) {
 		err = blunder.NewError(blunder.NotFoundError, "ENOENT")
 		return
 	}
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.W_OK|inode.X_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.W_OK|inode.X_OK,
+		inode.NoOverride) {
 		err = blunder.NewError(blunder.PermDeniedError, "EACCES")
 		return
 	}
@@ -2506,10 +2558,7 @@ func (mS *mountStruct) Rmdir(userID inode.InodeUserID, groupID inode.InodeGroupI
 	}
 	defer basenameInodeLock.Unlock()
 
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.W_OK|inode.X_OK) {
-		err = blunder.NewError(blunder.PermDeniedError, "EACCES")
-		return
-	}
+	// no permissions are required on the target directory
 
 	basenameInodeType, err := mS.volStruct.VolumeHandle.GetType(basenameInodeNumber)
 	if nil != err {
@@ -2558,16 +2607,120 @@ func (mS *mountStruct) Setstat(userID inode.InodeUserID, groupID inode.InodeGrou
 	}
 	defer inodeLock.Unlock()
 
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.P_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.P_OK,
+		inode.NoOverride) {
 		err = blunder.NewError(blunder.NotPermError, "EPERM")
 		return
 	}
+
+	// perform all permissions checks before making any changes
+	//
+	// changing the filesize requires write permission
 	_, ok := stat[StatSize]
 	if ok {
-		if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.W_OK) {
+		if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.W_OK,
+			inode.OwnerOverride) {
 			err = blunder.NewError(blunder.NotPermError, "EPERM")
 			return
 		}
+	}
+
+	// most other attributes can only be changed by the owner of the file
+	ownerOnly := []StatKey{StatCTime, StatCRTime, StatMTime, StatATime, StatMode, StatUserID, StatGroupID}
+	for _, key := range ownerOnly {
+		_, ok := stat[key]
+		if ok {
+			if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.P_OK,
+				inode.NoOverride) {
+				err = blunder.NewError(blunder.NotPermError, "EPERM")
+				return
+			}
+			break
+		}
+	}
+
+	// the superuser (root) is the only one that can change the owner of the file to a
+	// different user, but the owner of the file can perform a no-op "change" in
+	// ownership
+	newUserID, settingUserID := stat[StatUserID]
+	if settingUserID && userID != inode.InodeRootUserID {
+		if userID != inode.InodeUserID(newUserID) {
+			err = blunder.NewError(blunder.NotPermError, "EPERM")
+			return
+		}
+	}
+
+	// the group can only be changed to the current group or another group the owner
+	// is in (unless its the superuser asking)
+	newGroupID, settingGroupID := stat[StatGroupID]
+	if settingGroupID && groupID != inode.InodeGroupID(newGroupID) && userID != inode.InodeRootUserID {
+
+		err = blunder.NewError(blunder.NotPermError, "EPERM")
+		for _, otherID := range otherGroupIDs {
+			if inode.InodeGroupID(newGroupID) == otherID {
+				err = nil
+				break
+			}
+		}
+		if err != nil {
+			return
+		}
+	}
+
+	// sanity checks for invalid/illegal values
+	if settingUserID {
+		// Since we are using a uint64 to convey a uint32 value, make sure we didn't get something too big
+		if newUserID > math.MaxUint32 {
+			err = fmt.Errorf("%s: userID is too large - value is %d, max is %d.", utils.GetFnName(), newUserID, math.MaxUint32)
+			err = blunder.AddError(err, blunder.InvalidUserIDError)
+			return
+		}
+	}
+
+	if settingGroupID {
+		// Since we are using a uint64 to convey a uint32 value, make sure we didn't get something too big
+		if newGroupID > math.MaxUint32 {
+			err = fmt.Errorf("%s: groupID is too large - value is %d, max is %d.", utils.GetFnName(), newGroupID, math.MaxUint32)
+			err = blunder.AddError(err, blunder.InvalidGroupIDError)
+			return
+		}
+	}
+
+	filePerm, settingFilePerm := stat[StatMode]
+	if settingFilePerm {
+		// Since we are using a uint64 to convey a 12 bit value, make sure we didn't get something too big
+		if filePerm >= 1<<12 {
+			err = fmt.Errorf("%s: filePerm is too large - value is %d, max is %d.", utils.GetFnName(),
+				filePerm, 1<<12)
+			err = blunder.AddError(err, blunder.InvalidFileModeError)
+			return
+		}
+	}
+
+	// get to work setting things
+	//
+	// Set permissions, if present in the map
+	if settingFilePerm {
+		err = mS.volStruct.VolumeHandle.SetPermMode(inodeNumber, inode.InodeMode(filePerm))
+		if err != nil {
+			logger.ErrorWithError(err)
+			return err
+		}
+	}
+
+	// set owner and/or group owner, if present in the map
+	err = nil
+	if settingUserID && settingGroupID {
+		err = mS.volStruct.VolumeHandle.SetOwnerUserIDGroupID(inodeNumber, inode.InodeUserID(newUserID),
+			inode.InodeGroupID(newGroupID))
+	} else if settingUserID {
+		err = mS.volStruct.VolumeHandle.SetOwnerUserID(inodeNumber, inode.InodeUserID(newUserID))
+	} else if settingGroupID {
+		err = mS.volStruct.VolumeHandle.SetOwnerGroupID(inodeNumber, inode.InodeGroupID(newGroupID))
+	}
+	if err != nil {
+		logger.ErrorWithError(err)
+		return
 	}
 
 	// Set crtime, if present in the map
@@ -2623,63 +2776,6 @@ func (mS *mountStruct) Setstat(userID inode.InodeUserID, groupID inode.InodeGrou
 		}
 	}
 
-	// Set userID, if present in the map
-	//
-	// TODO: only root can do this (unless the userid is not changing, in which case its OK) --craig
-	newUserID, settingUserID := stat[StatUserID]
-	if settingUserID {
-		// Since we are using a uint64 to convey a uint32 value, make sure we didn't get something too big
-		if newUserID > math.MaxUint32 {
-			err = fmt.Errorf("%s: userID is too large - value is %d, max is %d.", utils.GetFnName(), newUserID, math.MaxUint32)
-			return blunder.AddError(err, blunder.InvalidUserIDError)
-		}
-	}
-
-	// Set groupID, if present in the map
-	//
-	// TODO: any user can change a file to a different group in their group list,
-	// but only root can change to a group not in the group list. --craig
-	newGroupID, settingGroupID := stat[StatGroupID]
-	if settingGroupID {
-		// Since we are using a uint64 to convey a uint32 value, make sure we didn't get something too big
-		if newGroupID > math.MaxUint32 {
-			err = fmt.Errorf("%s: groupID is too large - value is %d, max is %d.", utils.GetFnName(), newGroupID, math.MaxUint32)
-			return blunder.AddError(err, blunder.InvalidGroupIDError)
-		}
-	}
-
-	if settingUserID || settingGroupID {
-		if settingUserID {
-			if settingGroupID {
-				err = mS.volStruct.VolumeHandle.SetOwnerUserIDGroupID(inodeNumber, inode.InodeUserID(newUserID), inode.InodeGroupID(newGroupID))
-			} else { // only settingUserID is true
-				err = mS.volStruct.VolumeHandle.SetOwnerUserID(inodeNumber, inode.InodeUserID(newUserID))
-			}
-		} else { // only settingGroupID is true
-			err = mS.volStruct.VolumeHandle.SetOwnerGroupID(inodeNumber, inode.InodeGroupID(newGroupID))
-		}
-		if nil != err {
-			logger.ErrorWithError(err)
-			return err
-		}
-	}
-
-	// Set mode, if present in the map
-	filePerm, ok := stat[StatMode]
-	if ok {
-		// Since we are using a uint64 to convey a uint32 value, make sure we didn't get something too big
-		if filePerm > math.MaxUint32 {
-			err = fmt.Errorf("%s: filePerm is too large - value is %d, max is %d.", utils.GetFnName(), filePerm, math.MaxUint32)
-			return blunder.AddError(err, blunder.InvalidFileModeError)
-		}
-
-		err = mS.volStruct.VolumeHandle.SetPermMode(inodeNumber, inode.InodeMode(filePerm))
-		if err != nil {
-			logger.ErrorWithError(err)
-			return err
-		}
-	}
-
 	stats.IncrementOperations(&stats.FsSetstatOps)
 	return
 }
@@ -2701,11 +2797,13 @@ func (mS *mountStruct) SetXAttr(userID inode.InodeUserID, groupID inode.InodeGro
 	}
 	defer inodeLock.Unlock()
 
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK,
+		inode.NoOverride) {
 		err = blunder.NewError(blunder.NotFoundError, "ENOENT")
 		return
 	}
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.W_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.W_OK,
+		inode.OwnerOverride) {
 		err = blunder.NewError(blunder.PermDeniedError, "EACCES")
 		return
 	}
@@ -2784,7 +2882,9 @@ func (mS *mountStruct) Symlink(userID inode.InodeUserID, groupID inode.InodeGrou
 	}
 	defer inodeLock.Unlock()
 
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK,
+		inode.NoOverride) {
+
 		destroyErr := mS.volStruct.VolumeHandle.Destroy(symlinkInodeNumber)
 		if destroyErr != nil {
 			logger.WarnfWithError(destroyErr, "couldn't destroy inode %v after failed Access(F_OK) in fs.Symlink", symlinkInodeNumber)
@@ -2792,7 +2892,9 @@ func (mS *mountStruct) Symlink(userID inode.InodeUserID, groupID inode.InodeGrou
 		err = blunder.NewError(blunder.NotFoundError, "ENOENT")
 		return
 	}
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.W_OK|inode.X_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.W_OK|inode.X_OK,
+		inode.NoOverride) {
+
 		destroyErr := mS.volStruct.VolumeHandle.Destroy(symlinkInodeNumber)
 		if destroyErr != nil {
 			logger.WarnfWithError(destroyErr, "couldn't destroy inode %v after failed Access(W_OK|X_OK) in fs.Symlink", symlinkInodeNumber)
@@ -2826,11 +2928,13 @@ func (mS *mountStruct) Unlink(userID inode.InodeUserID, groupID inode.InodeGroup
 	}
 	defer inodeLock.Unlock()
 
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK,
+		inode.NoOverride) {
 		err = blunder.NewError(blunder.NotFoundError, "ENOENT")
 		return
 	}
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.W_OK|inode.X_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.W_OK|inode.X_OK,
+		inode.NoOverride) {
 		err = blunder.NewError(blunder.PermDeniedError, "EACCES")
 		return
 	}
@@ -2913,11 +3017,13 @@ func (mS *mountStruct) Write(userID inode.InodeUserID, groupID inode.InodeGroupI
 	}
 	defer inodeLock.Unlock()
 
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.F_OK,
+		inode.NoOverride) {
 		err = blunder.NewError(blunder.NotFoundError, "ENOENT")
 		return
 	}
-	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.W_OK) {
+	if !mS.volStruct.VolumeHandle.Access(inodeNumber, userID, groupID, otherGroupIDs, inode.W_OK,
+		inode.OwnerOverride) {
 		err = blunder.NewError(blunder.PermDeniedError, "EACCES")
 		return
 	}
