@@ -649,7 +649,8 @@ class PfsMiddleware(object):
     def __call__(self, req):
         vrs, acc, con, obj = utils.parse_path(req.path)
 
-        if not acc or not constraints.valid_api_version(vrs):
+        if not acc or not constraints.valid_api_version(vrs) or (
+                obj and not con):
             # could be a GET /info request or something made up by some
             # other middleware; get out of the way.
             return self.app
@@ -921,6 +922,8 @@ class PfsMiddleware(object):
         return resp
 
     def head_container(self, ctx):
+        if ctx.container_name in ('.', '..'):
+            return swob.HTTPNotFound(request=ctx.req)
         head_request = rpc.head_request(urllib_parse.unquote(ctx.req.path))
         try:
             head_response = self.rpc_call(ctx, head_request)
@@ -943,6 +946,9 @@ class PfsMiddleware(object):
         return resp
 
     def put_container(self, ctx):
+        if ctx.container_name in ('.', '..'):
+            return swob.HTTPBadRequest(
+                request=ctx.req, body='Container name cannot be "." or ".."')
         req = ctx.req
         container_path = urllib_parse.unquote(req.path)
         err = constraints.check_metadata(req, 'container')
@@ -992,6 +998,8 @@ class PfsMiddleware(object):
         return swob.HTTPAccepted(request=req)
 
     def post_container(self, ctx):
+        if ctx.container_name in ('.', '..'):
+            return swob.HTTPNotFound(request=ctx.req)
         req = ctx.req
         container_path = urllib_parse.unquote(req.path)
         err = constraints.check_metadata(req, 'container')
@@ -1090,6 +1098,8 @@ class PfsMiddleware(object):
         resp.headers["X-Storage-Policy"] = self._default_storage_policy()
 
     def get_container(self, ctx):
+        if ctx.container_name in ('.', '..'):
+            return swob.HTTPNotFound(request=ctx.req)
         req = ctx.req
         if req.environ.get('swift.source') in ('DLO', 'SW', 'VW'):
             # Middlewares typically want json, but most *assume* it following
@@ -1218,6 +1228,12 @@ class PfsMiddleware(object):
         return buf.getvalue()
 
     def put_object(self, ctx):
+        if ctx.container_name in ('.', '..'):
+            return swob.HTTPNotFound(request=ctx.req)
+        if any(p in ('', '.', '..') for p in ctx.object_name.split('/')):
+            return swob.HTTPBadRequest(
+                request=ctx.req,
+                body='No path component may be "", ".", or ".."')
         req = ctx.req
         # Make sure the (virtual) container exists
         #
@@ -1403,6 +1419,9 @@ class PfsMiddleware(object):
         return swob.HTTPCreated(request=req, headers=resp_headers, body="")
 
     def post_object(self, ctx):
+        if ctx.container_name in ('.', '..') or any(
+                p in ('', '.', '..') for p in ctx.object_name.split('/')):
+            return swob.HTTPNotFound(request=ctx.req)
         req = ctx.req
         path = urllib_parse.unquote(req.path)
         new_metadata = extract_object_metadata_from_headers(req.headers)
@@ -1431,6 +1450,9 @@ class PfsMiddleware(object):
         return resp
 
     def get_object(self, ctx):
+        if ctx.container_name in ('.', '..') or any(
+                p in ('', '.', '..') for p in ctx.object_name.split('/')):
+            return swob.HTTPNotFound(request=ctx.req)
         req = ctx.req
         byteranges = req.range.ranges if req.range else ()
 
@@ -1562,6 +1584,9 @@ class PfsMiddleware(object):
         channel.put("alright, it's done")
 
     def delete_object(self, ctx):
+        if ctx.container_name in ('.', '..') or ctx.object_name and any(
+                p in ('', '.', '..') for p in ctx.object_name.split('/')):
+            return swob.HTTPNotFound(request=ctx.req)
         try:
             self.rpc_call(ctx, rpc.delete_request(
                 urllib_parse.unquote(ctx.req.path)))
@@ -1575,6 +1600,9 @@ class PfsMiddleware(object):
         return swob.HTTPNoContent(request=ctx.req)
 
     def head_object(self, ctx):
+        if ctx.container_name in ('.', '..') or any(
+                p in ('', '.', '..') for p in ctx.object_name.split('/')):
+            return swob.HTTPNotFound(request=ctx.req)
         req = ctx.req
         head_request = rpc.head_request(urllib_parse.unquote(req.path))
         try:
